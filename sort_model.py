@@ -26,7 +26,7 @@ class SortModel(nn.Module):
         clamped_indices = self.indices.clamp(0, 1)
         self.array = self.afn(clamped_indices)
         alpha = 0.1
-        loss = self.array.sum() * 0.0
+        loss = self.indices.sum() * 0.0
         for position in range(1, len(self.array)):
             left_item = self.array[position - 1]
             this_item = self.array[position]

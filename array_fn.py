@@ -17,8 +17,14 @@ class ArrayFunction(torch.nn.Module):
         if n == 1:
             return torch.full_like(x, self.y[0])
 
-        idx = torch.round(x * (n - 1)).long()
-        return self.y[idx]
+        t = x * (n - 1)
+        i0 = torch.floor(t).long().clamp(0, n - 2)
+        i1 = i0 + 1
+        w = t - i0.to(t.dtype)
+
+        y_lin = (1 - w) * self.y[i0] + w * self.y[i1]
+        y_round = self.y[torch.round(t).long()]
+        return y_round + (y_lin - y_lin.detach())
 
 if __name__ == "__main__":
     f = ArrayFunction([10.0, 20.0, 50.0, 80.0])
