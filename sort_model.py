@@ -16,15 +16,18 @@ class SortModel(nn.Module):
         clamped_indices = self.indices.clamp(0, 1)
         f = func_generator.make_piecewise_linear(clamped_indices, array)
 
-        alpha = 0.1
+        alpha = 1
+        delta = 0.0005
         total_out_of_order = torch.zeros(())
 
         for index_of_index, index in enumerate(clamped_indices):
             if index_of_index == 0:
                 continue
 
-            left_item = f(clamped_indices[index_of_index - 1])
-            this_item = f(index)
+            left_index = clamped_indices[index_of_index - 1]
+
+            left_item = f(left_index + delta)
+            this_item = f(index - delta)
 
             gap = torch.clamp(left_item - this_item, min=0.0)
             total_out_of_order = total_out_of_order + gap
@@ -43,7 +46,11 @@ if __name__ == "__main__":
     csv_path = Path(__file__).parent / "training_log.csv"
     with open(csv_path, "w", newline="") as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(utils.csv_header(len(array)))
+        header = utils.csv_header(len(array))
+        writer.writerow(header)
+
+        col_width = 12
+        print("".join(f"{h:>{col_width}}" for h in header))
 
         for epoch in range(num_epochs):
             optimizer.zero_grad()
@@ -52,7 +59,16 @@ if __name__ == "__main__":
             optimizer.step()
             indices = model.get_indices()
             new_array = array[indices]
-            writer.writerow(utils.csv_row(epoch, loss.item(), model, new_array))
+            row = utils.csv_row(epoch, loss.item(), model, new_array)
+            writer.writerow(row)
+
+            formatted = []
+            for value in row:
+                if isinstance(value, float):
+                    formatted.append(f"{value:>{col_width}.4f}")
+                else:
+                    formatted.append(f"{value:>{col_width}}")
+            print("".join(formatted))
 
             if loss.item() < 0.000001:
                 break
