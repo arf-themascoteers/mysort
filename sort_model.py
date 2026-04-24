@@ -18,20 +18,16 @@ class SortModel(nn.Module):
 
         alpha = 10
         delta = 0.0005
-        total_out_of_order = torch.zeros(())
 
-        for index_of_index, index in enumerate(clamped_indices):
-            if index_of_index == 0:
-                continue
+        sorted_indices, _ = torch.sort(clamped_indices)
+        left_points = sorted_indices[:-1] + delta
+        right_points = sorted_indices[1:] - delta
 
-            left_index = clamped_indices[index_of_index - 1]
+        left_items = f(left_points)
+        right_items = f(right_points)
 
-            left_item = f(left_index + delta)
-            this_item = f(index - delta)
-
-            gap = torch.clamp(left_item - this_item, min=0.0)
-            total_out_of_order = total_out_of_order + gap
-        return alpha * total_out_of_order
+        gaps = torch.clamp(left_items - right_items, min=0.0)
+        return alpha * gaps.sum()
 
     def get_indices(self):
         return utils.ranks_of(self.indices)
