@@ -1,5 +1,24 @@
 import torch
 
+
+def make_smooth(xp, yp, tau=0.01):
+    xp = xp.float()
+    yp = yp.float()
+
+    def f(x):
+        x = torch.as_tensor(x).float()
+        original_shape = x.shape
+        x_flat = x.reshape(-1)
+
+        dist_sq = (x_flat.unsqueeze(-1) - xp.unsqueeze(0)) ** 2
+        weights = torch.softmax(-dist_sq / tau, dim=-1)
+        y = (weights * yp.unsqueeze(0)).sum(dim=-1)
+
+        return y.reshape(original_shape)
+
+    return f
+
+
 def make_piecewise_linear(xp, yp):
     xp = xp.float()
     yp = yp.float()

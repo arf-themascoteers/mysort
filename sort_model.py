@@ -12,29 +12,23 @@ class SortModel(nn.Module):
         evenly_spaced = torch.linspace(0, 1, array_length)
         self.indices = nn.Parameter(evenly_spaced)
 
-    def forward(self, array):
+    def forward(self, array, tau=0.01):
         clamped_indices = self.indices.clamp(0, 1)
-        f = func_generator.make_piecewise_linear(clamped_indices, array)
+        f = func_generator.make_smooth(clamped_indices, array, tau=tau)
 
         alpha = 10
-
-        sorted_indices, _ = torch.sort(clamped_indices)
-        left_points = 0.75 * sorted_indices[:-1] + 0.25 * sorted_indices[1:]
-        right_points = 0.25 * sorted_indices[:-1] + 0.75 * sorted_indices[1:]
-
-        left_items = f(left_points)
-        right_items = f(right_points)
-
-        gaps = torch.clamp(left_items - right_items, min=0.0)
+        grid = torch.linspace(0.0, 1.0, 4 * len(array))
+        y = f(grid)
+        gaps = torch.clamp(y[:-1] - y[1:], min=0.0)
         return alpha * gaps.sum()
 
     def get_indices(self):
         return torch.argsort(self.indices)
 
-def predict(array, num_epochs=200, lr=0.1, verbose=False):
+def predict(array, num_epochs=500, lr=0.01, verbose=False):
     array = torch.as_tensor(array, dtype=torch.float32)
     model = SortModel(len(array))
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     csv_file = None
     writer = None
@@ -49,8 +43,11 @@ def predict(array, num_epochs=200, lr=0.1, verbose=False):
 
     try:
         for epoch in range(num_epochs):
+            progress = epoch / max(1, num_epochs - 1)
+            tau = 0.01 * (0.0001 / 0.01) ** progress
+
             optimizer.zero_grad()
-            loss = model(array)
+            loss = model(array, tau=tau)
             loss.backward()
             optimizer.step()
             with torch.no_grad():
