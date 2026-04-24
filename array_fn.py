@@ -23,12 +23,14 @@ class ArrayFunction(torch.nn.Module):
         w = t - i0.to(t.dtype)
 
         y_lin = (1 - w) * self.y[i0] + w * self.y[i1]
-        y_round = self.y[torch.round(t).long()]
-        return y_round + (y_lin - y_lin.detach())
+        return y_lin
 
 if __name__ == "__main__":
     f = ArrayFunction([10.0, 20.0, 50.0, 80.0])
     x = torch.tensor([0.0, 0.25, 0.5, 1.0], requires_grad=True)
+    z = f(x)
+    print(z)
     x = torch.linspace(0, 1, 4)
     z = f(x)
     print(z)
+
