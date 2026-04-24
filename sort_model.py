@@ -17,11 +17,10 @@ class SortModel(nn.Module):
         f = func_generator.make_piecewise_linear(clamped_indices, array)
 
         alpha = 10
-        delta = 0.0005
 
         sorted_indices, _ = torch.sort(clamped_indices)
-        left_points = sorted_indices[:-1] + delta
-        right_points = sorted_indices[1:] - delta
+        left_points = 0.75 * sorted_indices[:-1] + 0.25 * sorted_indices[1:]
+        right_points = 0.25 * sorted_indices[:-1] + 0.75 * sorted_indices[1:]
 
         left_items = f(left_points)
         right_items = f(right_points)
@@ -30,7 +29,7 @@ class SortModel(nn.Module):
         return alpha * gaps.sum()
 
     def get_indices(self):
-        return utils.ranks_of(self.indices)
+        return torch.argsort(self.indices)
 
 def predict(array, num_epochs=200, lr=0.1, verbose=False):
     array = torch.as_tensor(array, dtype=torch.float32)
@@ -54,6 +53,8 @@ def predict(array, num_epochs=200, lr=0.1, verbose=False):
             loss = model(array)
             loss.backward()
             optimizer.step()
+            with torch.no_grad():
+                model.indices.clamp_(0, 1)
             indices = model.get_indices()
             new_array = array[indices]
 
@@ -83,15 +84,15 @@ def predict(array, num_epochs=200, lr=0.1, verbose=False):
 def main():
     torch.manual_seed(0)
     test_arrays = [
-        [0.7, 0.2, 0.9],
-        [0.5, 0.1, 0.8, 0.3],
-        [0.4, 0.9, 0.1, 0.7, 0.2, 0.6],
-        [0.6, 0.1, 0.8, 0.3, 0.9, 0.2, 0.7, 0.4],
+        #  [0.7, 0.2, 0.9],
+        #  [0.5, 0.1, 0.8, 0.3],
+        #  [0.4, 0.9, 0.1, 0.7, 0.2, 0.6],
+         [0.6, 0.1, 0.8, 0.3, 0.9, 0.2, 0.7, 0.4],
     ]
 
     for array in test_arrays:
         original = torch.tensor(array, dtype=torch.float32)
-        sorted_array = predict(original, verbose=False)
+        sorted_array = predict(original, verbose=True)
         print(f"original: {original.tolist()}")
         print(f"sorted:   {sorted_array.tolist()}")
         print()

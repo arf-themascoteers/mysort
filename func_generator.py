@@ -15,9 +15,9 @@ def make_piecewise_linear(xp, yp):
 
         lo = xp[0].detach()
         hi = xp[-1].detach()
-        mask = (x_flat >= lo) & (x_flat <= hi)
+        x_clamped = x_flat.clamp(lo, hi)
 
-        i = torch.searchsorted(xp.detach(), x_flat.detach().clamp(lo, hi), right=True) - 1
+        i = torch.searchsorted(xp.detach(), x_clamped.detach(), right=True) - 1
         i = i.clamp(0, len(xp) - 2)
 
         x0 = xp[i]
@@ -25,8 +25,7 @@ def make_piecewise_linear(xp, yp):
         y0 = yp[i]
         y1 = yp[i + 1]
 
-        y = y0 + (x_flat - x0) * (y1 - y0) / (x1 - x0)
-        y = torch.where(mask, y, torch.full_like(y, float("nan")))
+        y = y0 + (x_clamped - x0) * (y1 - y0) / (x1 - x0)
 
         return y.reshape(original_shape)
 
