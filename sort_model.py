@@ -32,22 +32,23 @@ class SortModel(nn.Module):
     def get_indices(self):
         return utils.ranks_of(self.indices)
 
-if __name__ == "__main__":
-    torch.manual_seed(0)
-    array = torch.tensor([0.7, 0.2, 0.9])
+def predict(array, num_epochs=200, lr=0.1, verbose=False):
+    array = torch.as_tensor(array, dtype=torch.float32)
     model = SortModel(len(array))
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
-    num_epochs = 200
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
 
-    csv_path = Path(__file__).parent / "training_log.csv"
-    with open(csv_path, "w", newline="") as csv_file:
+    csv_file = None
+    writer = None
+    col_width = 12
+    if verbose:
+        csv_path = Path(__file__).parent / "training_log.csv"
+        csv_file = open(csv_path, "w", newline="")
         writer = csv.writer(csv_file)
         header = utils.csv_header(len(array))
         writer.writerow(header)
-
-        col_width = 12
         print("".join(f"{h:>{col_width}}" for h in header))
 
+    try:
         for epoch in range(num_epochs):
             optimizer.zero_grad()
             loss = model(array)
@@ -55,18 +56,46 @@ if __name__ == "__main__":
             optimizer.step()
             indices = model.get_indices()
             new_array = array[indices]
-            row = utils.csv_row(epoch, loss.item(), model, new_array)
-            writer.writerow(row)
 
-            formatted = []
-            for value in row:
-                if isinstance(value, float):
-                    formatted.append(f"{value:>{col_width}.4f}")
-                else:
-                    formatted.append(f"{value:>{col_width}}")
-            print("".join(formatted))
+            if verbose:
+                row = utils.csv_row(epoch, loss.item(), model, new_array)
+                writer.writerow(row)
+                formatted = []
+                for value in row:
+                    if isinstance(value, float):
+                        formatted.append(f"{value:>{col_width}.4f}")
+                    else:
+                        formatted.append(f"{value:>{col_width}}")
+                print("".join(formatted))
 
             if loss.item() < 0.000001:
                 break
+    finally:
+        if csv_file is not None:
+            csv_file.close()
+            print(f"training log written to {csv_path}")
 
-    print(f"training log written to {csv_path}")
+    with torch.no_grad():
+        indices = model.get_indices()
+        return array[indices]
+
+
+def main():
+    torch.manual_seed(0)
+    test_arrays = [
+        [0.7, 0.2, 0.9],
+        [0.5, 0.1, 0.8, 0.3],
+        [0.4, 0.9, 0.1, 0.7, 0.2, 0.6],
+        [0.6, 0.1, 0.8, 0.3, 0.9, 0.2, 0.7, 0.4],
+    ]
+
+    for array in test_arrays:
+        original = torch.tensor(array, dtype=torch.float32)
+        sorted_array = predict(original, verbose=False)
+        print(f"original: {original.tolist()}")
+        print(f"sorted:   {sorted_array.tolist()}")
+        print()
+
+
+if __name__ == "__main__":
+    main()
