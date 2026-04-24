@@ -16,15 +16,21 @@ def to_int_list(tensor):
 
 
 if __name__ == "__main__":
-    tensor = torch.tensor([0,2,4,1], dtype=torch.float32)
-    ranks = sort_model.ranks_of(tensor)
-    argsorted = torch.argsort(tensor)
-    sorted_values, _ = torch.sort(tensor)
+    # tensor = torch.tensor([0,2,4,1], dtype=torch.float32)
+    # ranks = sort_model.ranks_of(tensor)
+    # argsorted = torch.argsort(tensor)
+    # sorted_values, _ = torch.sort(tensor)
 
-    positions = list(range(len(tensor)))
+    # positions = list(range(len(tensor)))
 
-    print(format_row("position", positions))
-    print(format_row("tensor", round_list(tensor, 2)))
-    print(format_row("sorted", round_list(sorted_values, 2)))
-    print(format_row("argsort", to_int_list(argsorted)))
-    print(format_row("ranks_of", to_int_list(ranks)))
+    # print(format_row("position", positions))
+    # print(format_row("tensor", round_list(tensor, 2)))
+    # print(format_row("sorted", round_list(sorted_values, 2)))
+    # print(format_row("argsort", to_int_list(argsorted)))
+    # print(format_row("ranks_of", to_int_list(ranks)))
+    array = torch.tensor([0.7, 0.2, 0.9, 0.1, 0.5, 0.3])
+    score = sort_model.score_sortedness(array)
+    print(score)
+    array = torch.tensor([0.1, 0.2, 0.3, 0.6, 0.8, 0.9])
+    score = sort_model.score_sortedness(array)
+    print(score)    

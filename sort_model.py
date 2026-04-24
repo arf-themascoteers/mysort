@@ -47,7 +47,7 @@ class SortModel(nn.Module):
 
 def score_sortedness(array):
     ideal_ranks = ranks_of(array)
-    current_ranks = torch.arange(4 + 1)
+    current_ranks = torch.arange(len(array))
     rank_errors = (current_ranks - ideal_ranks).abs()
     return rank_errors.sum().item()
 
