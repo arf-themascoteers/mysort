@@ -12,23 +12,32 @@ class SortModel(nn.Module):
         evenly_spaced = torch.linspace(0, 1, array_length)
         self.indices = nn.Parameter(evenly_spaced)
 
-    def forward(self, array, tau=0.01):
+    def forward(self, array):
         clamped_indices = self.indices.clamp(0, 1)
-        f = func_generator.make_smooth(clamped_indices, array, tau=tau)
+        f = func_generator.make_piecewise_linear(clamped_indices, array)
 
         alpha = 10
-        grid = torch.linspace(0.0, 1.0, 4 * len(array))
-        y = f(grid)
-        gaps = torch.clamp(y[:-1] - y[1:], min=0.0)
-        return alpha * gaps.sum()
+        delta = 0.0005
+
+        sorted_indices, _ = torch.sort(clamped_indices)
+        left_points = sorted_indices[:-1] + delta
+        right_points = sorted_indices[1:] - delta
+
+        left_items = f(left_points)
+        right_items = f(right_points)
+
+        gaps = torch.relu(left_items - right_items) 
+        spacing = gaps * torch.abs(sorted_indices[:-1] - sorted_indices[1:])
+        total_loss = gaps.sum() + 0.001 * spacing.sum()
+        return alpha * total_loss
 
     def get_indices(self):
         return torch.argsort(self.indices)
 
-def predict(array, num_epochs=500, lr=0.01, verbose=False):
+def predict(array, num_epochs=200, lr=0.1, verbose=False):
     array = torch.as_tensor(array, dtype=torch.float32)
     model = SortModel(len(array))
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
 
     csv_file = None
     writer = None
@@ -43,11 +52,8 @@ def predict(array, num_epochs=500, lr=0.01, verbose=False):
 
     try:
         for epoch in range(num_epochs):
-            progress = epoch / max(1, num_epochs - 1)
-            tau = 0.01 * (0.0001 / 0.01) ** progress
-
             optimizer.zero_grad()
-            loss = model(array, tau=tau)
+            loss = model(array)
             loss.backward()
             optimizer.step()
             with torch.no_grad():
@@ -81,15 +87,15 @@ def predict(array, num_epochs=500, lr=0.01, verbose=False):
 def main():
     torch.manual_seed(0)
     test_arrays = [
-        #  [0.7, 0.2, 0.9],
-        #  [0.5, 0.1, 0.8, 0.3],
-        #  [0.4, 0.9, 0.1, 0.7, 0.2, 0.6],
+         [0.7, 0.2, 0.9],
+         [0.5, 0.1, 0.8, 0.3],
+         [0.4, 0.9, 0.1, 0.7, 0.2, 0.6],
          [0.6, 0.1, 0.8, 0.3, 0.9, 0.2, 0.7, 0.4],
     ]
 
     for array in test_arrays:
         original = torch.tensor(array, dtype=torch.float32)
-        sorted_array = predict(original, verbose=True)
+        sorted_array = predict(original, verbose=False)
         print(f"original: {original.tolist()}")
         print(f"sorted:   {sorted_array.tolist()}")
         print()
