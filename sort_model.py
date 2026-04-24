@@ -16,7 +16,7 @@ class SortModel(nn.Module):
         clamped_indices = self.indices.clamp(0, 1)
         f = func_generator.make_piecewise_linear(clamped_indices, array)
 
-        alpha = 1
+        alpha = 10
         delta = 0.0005
         total_out_of_order = torch.zeros(())
 
