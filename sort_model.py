@@ -106,6 +106,14 @@ class SortModel(nn.Module):
         m = torch.mean(clamped_indices)
         clamped_indices = (1 - lam) * clamped_indices + lam * m
 
+        eps = 1e-6
+        positional = eps * torch.arange(
+            clamped_indices.numel(),
+            dtype=clamped_indices.dtype,
+            device=clamped_indices.device,
+        )
+        clamped_indices = clamped_indices + positional
+
         f = FuncGenerator.make_piecewise_linear(clamped_indices, array)
 
         alpha = 100
