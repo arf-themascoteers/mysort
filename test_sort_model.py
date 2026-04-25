@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 
 from generate_test_cases import load_cases
-from sort_model import Utils, predict
+from sort_model import SortModel, Utils
 
 
 def is_sorted(values):
@@ -46,7 +46,7 @@ def run_tests(output_csv: Path):
             original_score = Utils.score_sortedness(original)
 
             start = time.perf_counter()
-            result = predict(original.clone(), verbose=False)
+            result = SortModel.predict(original.clone(), verbose=False)
             elapsed = time.perf_counter() - start
 
             final_score = Utils.score_sortedness(result)

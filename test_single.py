@@ -1,10 +1,10 @@
 import torch
 
 from generate_test_cases import load_cases
-from sort_model import Utils, predict
+from sort_model import SortModel, Utils
 
 
-CASE_ID = 170
+CASE_ID = 140
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     print(f"original score: {Utils.score_sortedness(original)}")
     print()
 
-    result = predict(original.clone(), verbose=True)
+    result = SortModel.predict(original.clone(), verbose=True)
 
     print()
     print(f"sorted:   {result.tolist()}")
