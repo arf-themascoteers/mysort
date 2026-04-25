@@ -4,7 +4,7 @@ from generate_test_cases import load_cases
 from sort_model import Utils, predict
 
 
-CASE_ID = 52
+CASE_ID = 170
 
 
 def main():
