@@ -69,30 +69,34 @@ def run_tests(output_csv: Path):
     )
     print("-" * 120)
 
-    for test_id, (case_type, array) in enumerate(cases):
-        original = torch.tensor(array, dtype=torch.float32)
-        original_score = Utils.score_sortedness(original)
+    with open(output_csv, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(columns)
+        f.flush()
 
-        start = time.perf_counter()
-        result = predict(original.clone(), verbose=False)
-        elapsed = time.perf_counter() - start
+        for test_id, (case_type, array) in enumerate(cases):
+            original = torch.tensor(array, dtype=torch.float32)
+            original_score = Utils.score_sortedness(original)
 
-        final_score = Utils.score_sortedness(result)
-        result_list = result.tolist()
-        monotonic = is_sorted(result_list)
-        perfectly_sorted = final_score == 0
+            start = time.perf_counter()
+            result = predict(original.clone(), verbose=False)
+            elapsed = time.perf_counter() - start
 
-        status = "PASS" if perfectly_sorted else "FAIL"
-        array_preview = ", ".join(f"{v:.3f}" for v in array)
-        if len(array_preview) > 58:
-            array_preview = array_preview[:55] + "..."
-        print(
-            f"{test_id:>4} {len(array):>4} {case_type:<22} {int(original_score):>10} "
-            f"{int(final_score):>6} {status:<8} [{array_preview}]"
-        )
+            final_score = Utils.score_sortedness(result)
+            result_list = result.tolist()
+            monotonic = is_sorted(result_list)
+            perfectly_sorted = final_score == 0
 
-        rows.append(
-            [
+            status = "PASS" if perfectly_sorted else "FAIL"
+            array_preview = ", ".join(f"{v:.3f}" for v in array)
+            if len(array_preview) > 58:
+                array_preview = array_preview[:55] + "..."
+            print(
+                f"{test_id:>4} {len(array):>4} {case_type:<22} {int(original_score):>10} "
+                f"{int(final_score):>6} {status:<8} [{array_preview}]"
+            )
+
+            row = [
                 test_id,
                 len(array),
                 case_type,
@@ -104,12 +108,9 @@ def run_tests(output_csv: Path):
                 int(monotonic),
                 round(elapsed, 4),
             ]
-        )
-
-    with open(output_csv, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(columns)
-        writer.writerows(rows)
+            writer.writerow(row)
+            f.flush()
+            rows.append(row)
 
     return columns, rows
 
