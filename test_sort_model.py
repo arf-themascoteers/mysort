@@ -27,12 +27,13 @@ def run_tests(output_csv: Path):
         "final_score",
         "perfectly_sorted",
         "monotonic",
+        "epochs_run",
         "elapsed_seconds",
     ]
 
     print(
         f"{'#':>4} {'len':>4} {'case_type':<22} {'orig_score':>10} "
-        f"{'final':>6} {'result':<8} {'array':<60}"
+        f"{'final':>6} {'epochs':>7} {'result':<8} {'array':<60}"
     )
     print("-" * 120)
 
@@ -49,6 +50,7 @@ def run_tests(output_csv: Path):
             model = SortModel(len(original))
             result = model.predict(original.clone(), verbose=False)
             elapsed = time.perf_counter() - start
+            epochs_run = model.epoch + 1
 
             final_score = Utils.score_sortedness(result)
             result_list = result.tolist()
@@ -61,7 +63,7 @@ def run_tests(output_csv: Path):
                 array_preview = array_preview[:55] + "..."
             print(
                 f"{case_id:>4} {len(array):>4} {case_type:<22} {int(original_score):>10} "
-                f"{int(final_score):>6} {status:<8} [{array_preview}]"
+                f"{int(final_score):>6} {epochs_run:>7} {status:<8} [{array_preview}]"
             )
 
             row = [
@@ -74,6 +76,7 @@ def run_tests(output_csv: Path):
                 int(final_score),
                 int(perfectly_sorted),
                 int(monotonic),
+                epochs_run,
                 round(elapsed, 4),
             ]
             writer.writerow(row)
