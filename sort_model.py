@@ -46,7 +46,7 @@ class SortModel(nn.Module):
         self.epoch = 0
         self.min_loss = 0.00000001
         self.NUM_EPOCHS = 5000
-        self.LEARNING_RATE = 0.01
+        self.LEARNING_RATE = 0.02
 
 
     def forward(self, array):
@@ -57,7 +57,8 @@ class SortModel(nn.Module):
         scaled = torch.where(violations > 0, violations + 0.01, violations)
         masked_spacing = torch.where(violations > 0, idx_diff.abs(), torch.zeros_like(idx_diff))
         relevant_spacing = scaled * masked_spacing
-        return (scaled + relevant_spacing).sum()
+        loss_mat = torch.triu(relevant_spacing, diagonal=1)
+        return loss_mat.sum()
 
     def get_indices(self):
         return torch.argsort(self.indices)
