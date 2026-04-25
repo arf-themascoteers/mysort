@@ -38,18 +38,17 @@ class Utils:
         return row
 
 
-NUM_EPOCHS = 10000
-LEARNING_RATE = 0.1
-
-
 class SortModel(nn.Module):
     def __init__(self, array_length):
         super().__init__()
         evenly_spaced = torch.linspace(0, 1, array_length)
         self.indices = nn.Parameter(evenly_spaced)
         self.epoch = 0
-        self.alpha = 100
+        self.alpha = 1
         self.min_loss = 0.00000001
+        self.NUM_EPOCHS = 10000
+        self.LEARNING_RATE = 0.1
+
 
     def forward(self, array):
         sorted_indices, perm = torch.sort(self.indices)
@@ -59,14 +58,14 @@ class SortModel(nn.Module):
         violations = torch.relu(-diffs)
         spacing = sorted_indices[1:] - sorted_indices[:-1]
         relevant_spacing = violations * spacing
-        return (violations+relevant_spacing).mean() *self.alpha
+        return (violations+relevant_spacing).sum() *self.alpha
 
     def get_indices(self):
         return torch.argsort(self.indices)
 
     def predict(self, array, verbose=False):
         array = torch.as_tensor(array, dtype=torch.float32)
-        optimizer = torch.optim.SGD(self.parameters(), lr=LEARNING_RATE)
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.LEARNING_RATE)
 
         csv_file = None
         writer = None
@@ -80,7 +79,7 @@ class SortModel(nn.Module):
             print("".join(f"{h:>{col_width}}" for h in header))
 
         try:
-            for epoch in range(NUM_EPOCHS):
+            for epoch in range(self.NUM_EPOCHS):
                 self.epoch = epoch
                 optimizer.zero_grad()
                 loss = self(array)
