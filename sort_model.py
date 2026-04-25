@@ -6,24 +6,6 @@ import torch.nn as nn
 
 class FuncGenerator:
     @staticmethod
-    def make_smooth(xp, yp, tau=0.01):
-        xp = xp.float()
-        yp = yp.float()
-
-        def f(x):
-            x = torch.as_tensor(x).float()
-            original_shape = x.shape
-            x_flat = x.reshape(-1)
-
-            dist_sq = (x_flat.unsqueeze(-1) - xp.unsqueeze(0)) ** 2
-            weights = torch.softmax(-dist_sq / tau, dim=-1)
-            y = (weights * yp.unsqueeze(0)).sum(dim=-1)
-
-            return y.reshape(original_shape)
-
-        return f
-
-    @staticmethod
     def make_piecewise_linear(xp, yp):
         xp = xp.float()
         yp = yp.float()
@@ -99,6 +81,7 @@ class SortModel(nn.Module):
         super().__init__()
         evenly_spaced = torch.linspace(0, 1, array_length)
         self.indices = nn.Parameter(evenly_spaced)
+        self.epoch = 0
 
     def forward(self, array):
         clamped_indices = self.indices.clamp(0, 1)
@@ -135,11 +118,9 @@ class SortModel(nn.Module):
     def get_indices(self):
         return torch.argsort(self.indices)
 
-    @classmethod
-    def predict(cls, array, verbose=False):
+    def predict(self, array, verbose=False):
         array = torch.as_tensor(array, dtype=torch.float32)
-        model = cls(len(array))
-        optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
+        optimizer = torch.optim.SGD(self.parameters(), lr=LEARNING_RATE)
 
         csv_file = None
         writer = None
@@ -154,17 +135,18 @@ class SortModel(nn.Module):
 
         try:
             for epoch in range(NUM_EPOCHS):
+                self.epoch = epoch
                 optimizer.zero_grad()
-                loss = model(array)
+                loss = self(array)
                 loss.backward()
                 optimizer.step()
                 with torch.no_grad():
-                    model.indices.clamp_(0, 1)
-                indices = model.get_indices()
+                    self.indices.clamp_(0, 1)
+                indices = self.get_indices()
                 new_array = array[indices]
 
                 if verbose:
-                    row = Utils.csv_row(epoch, loss.item(), model, new_array)
+                    row = Utils.csv_row(epoch, loss.item(), self, new_array)
                     writer.writerow(row)
                     formatted = []
                     for value in row:
@@ -182,7 +164,7 @@ class SortModel(nn.Module):
                 print(f"training log written to {csv_path}")
 
         with torch.no_grad():
-            indices = model.get_indices()
+            indices = self.get_indices()
             return array[indices]
 
 
@@ -197,7 +179,8 @@ def main():
 
     for array in test_arrays:
         original = torch.tensor(array, dtype=torch.float32)
-        sorted_array = SortModel.predict(original, verbose=False)
+        model = SortModel(len(original))
+        sorted_array = model.predict(original, verbose=False)
         print(f"original: {original.tolist()}")
         print(f"sorted:   {sorted_array.tolist()}")
         print()

@@ -46,7 +46,8 @@ def run_tests(output_csv: Path):
             original_score = Utils.score_sortedness(original)
 
             start = time.perf_counter()
-            result = SortModel.predict(original.clone(), verbose=False)
+            model = SortModel(len(original))
+            result = model.predict(original.clone(), verbose=False)
             elapsed = time.perf_counter() - start
 
             final_score = Utils.score_sortedness(result)

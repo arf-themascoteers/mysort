@@ -4,7 +4,7 @@ from generate_test_cases import load_cases
 from sort_model import SortModel, Utils
 
 
-CASE_ID = 140
+CASE_ID = 112
 
 
 def main():
@@ -21,7 +21,8 @@ def main():
     print(f"original score: {Utils.score_sortedness(original)}")
     print()
 
-    result = SortModel.predict(original.clone(), verbose=True)
+    model = SortModel(len(original))
+    result = model.predict(original.clone(), verbose=True)
 
     print()
     print(f"sorted:   {result.tolist()}")
