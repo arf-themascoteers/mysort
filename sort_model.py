@@ -100,7 +100,7 @@ class SortModel(nn.Module):
         clamped_indices = self.indices.clamp(0, 1)
         f = FuncGenerator.make_piecewise_linear(clamped_indices, array)
 
-        alpha = 5
+        alpha = 10
         delta = 0.0005
 
         sorted_indices, _ = torch.sort(clamped_indices)
@@ -111,8 +111,9 @@ class SortModel(nn.Module):
         right_items = f(right_points)
 
         gaps = torch.relu(left_items - right_items)
+        gaps = gaps / (gaps.sum()+0.00001)
         spacing = gaps * torch.abs(sorted_indices[:-1] - sorted_indices[1:])
-        total_loss = gaps.sum() + 0.001 * spacing.sum()
+        total_loss = gaps.sum() + 0.001 * spacing.sum() 
         return alpha * total_loss
 
     def get_indices(self):
