@@ -56,8 +56,9 @@ class SortModel(nn.Module):
         diffs = sorted_array[1:] - sorted_array[:-1]
         violations = torch.relu(-diffs)
         spacing = sorted_indices[1:] - sorted_indices[:-1]
-
-        return (violations * spacing).sum()
+        relevant_spacing = violations * spacing
+        #relevant_spacing = relevant_spacing / (relevant_spacing.sum() + 0.00001)
+        return (violations + relevant_spacing).sum()
 
     def get_indices(self):
         return torch.argsort(self.indices)
