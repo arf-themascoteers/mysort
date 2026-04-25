@@ -1,9 +1,93 @@
 import csv
 from pathlib import Path
-import utils
 import torch
 import torch.nn as nn
-import func_generator
+
+
+class FuncGenerator:
+    @staticmethod
+    def make_smooth(xp, yp, tau=0.01):
+        xp = xp.float()
+        yp = yp.float()
+
+        def f(x):
+            x = torch.as_tensor(x).float()
+            original_shape = x.shape
+            x_flat = x.reshape(-1)
+
+            dist_sq = (x_flat.unsqueeze(-1) - xp.unsqueeze(0)) ** 2
+            weights = torch.softmax(-dist_sq / tau, dim=-1)
+            y = (weights * yp.unsqueeze(0)).sum(dim=-1)
+
+            return y.reshape(original_shape)
+
+        return f
+
+    @staticmethod
+    def make_piecewise_linear(xp, yp):
+        xp = xp.float()
+        yp = yp.float()
+
+        order = torch.argsort(xp.detach())
+        xp = xp[order]
+        yp = yp[order]
+
+        def f(x):
+            x = torch.as_tensor(x).float()
+            original_shape = x.shape
+            x_flat = x.reshape(-1)
+
+            lo = xp[0].detach()
+            hi = xp[-1].detach()
+            x_clamped = x_flat.clamp(lo, hi)
+
+            i = torch.searchsorted(xp.detach(), x_clamped.detach(), right=True) - 1
+            i = i.clamp(0, len(xp) - 2)
+
+            x0 = xp[i]
+            x1 = xp[i + 1]
+            y0 = yp[i]
+            y1 = yp[i + 1]
+
+            y = y0 + (x_clamped - x0) * (y1 - y0) / (x1 - x0)
+
+            return y.reshape(original_shape)
+
+        return f
+
+
+class Utils:
+    @staticmethod
+    def ranks_of(tensor):
+        sorted_positions = torch.argsort(tensor)
+        ranks = torch.argsort(sorted_positions)
+        return ranks
+
+    @staticmethod
+    def score_sortedness(array):
+        ideal_ranks = Utils.ranks_of(array)
+        current_ranks = torch.arange(len(array))
+        rank_errors = (current_ranks - ideal_ranks).abs()
+        return rank_errors.sum().item()
+
+    @staticmethod
+    def csv_header(array_length):
+        columns = ["epoch", "loss", "score"]
+        for position in range(array_length):
+            columns.append(f"idx_{position}")
+        for position in range(array_length):
+            columns.append(f"reordered_{position}")
+        return columns
+
+    @staticmethod
+    def csv_row(epoch, loss_value, model, array):
+        score = Utils.score_sortedness(array)
+        row = [epoch, loss_value, score]
+        for value in model.indices.detach().tolist():
+            row.append(value)
+        for value in array.tolist():
+            row.append(value)
+        return row
 
 
 class SortModel(nn.Module):
@@ -14,7 +98,7 @@ class SortModel(nn.Module):
 
     def forward(self, array):
         clamped_indices = self.indices.clamp(0, 1)
-        f = func_generator.make_piecewise_linear(clamped_indices, array)
+        f = FuncGenerator.make_piecewise_linear(clamped_indices, array)
 
         alpha = 10
         delta = 0.0005
@@ -26,7 +110,7 @@ class SortModel(nn.Module):
         left_items = f(left_points)
         right_items = f(right_points)
 
-        gaps = torch.relu(left_items - right_items) 
+        gaps = torch.relu(left_items - right_items)
         spacing = gaps * torch.abs(sorted_indices[:-1] - sorted_indices[1:])
         total_loss = gaps.sum() + 0.001 * spacing.sum()
         return alpha * total_loss
@@ -34,7 +118,8 @@ class SortModel(nn.Module):
     def get_indices(self):
         return torch.argsort(self.indices)
 
-def predict(array, num_epochs=200, lr=0.1, verbose=False):
+
+def predict(array, num_epochs=1000, lr=0.1, verbose=False):
     array = torch.as_tensor(array, dtype=torch.float32)
     model = SortModel(len(array))
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
@@ -46,7 +131,7 @@ def predict(array, num_epochs=200, lr=0.1, verbose=False):
         csv_path = Path(__file__).parent / "training_log.csv"
         csv_file = open(csv_path, "w", newline="")
         writer = csv.writer(csv_file)
-        header = utils.csv_header(len(array))
+        header = Utils.csv_header(len(array))
         writer.writerow(header)
         print("".join(f"{h:>{col_width}}" for h in header))
 
@@ -62,7 +147,7 @@ def predict(array, num_epochs=200, lr=0.1, verbose=False):
             new_array = array[indices]
 
             if verbose:
-                row = utils.csv_row(epoch, loss.item(), model, new_array)
+                row = Utils.csv_row(epoch, loss.item(), model, new_array)
                 writer.writerow(row)
                 formatted = []
                 for value in row:
@@ -87,10 +172,10 @@ def predict(array, num_epochs=200, lr=0.1, verbose=False):
 def main():
     torch.manual_seed(0)
     test_arrays = [
-         [0.7, 0.2, 0.9],
-         [0.5, 0.1, 0.8, 0.3],
-         [0.4, 0.9, 0.1, 0.7, 0.2, 0.6],
-         [0.6, 0.1, 0.8, 0.3, 0.9, 0.2, 0.7, 0.4],
+        [0.7, 0.2, 0.9],
+        [0.5, 0.1, 0.8, 0.3],
+        [0.4, 0.9, 0.1, 0.7, 0.2, 0.6],
+        [0.6, 0.1, 0.8, 0.3, 0.9, 0.2, 0.7, 0.4],
     ]
 
     for array in test_arrays:
