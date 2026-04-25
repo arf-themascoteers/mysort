@@ -100,8 +100,8 @@ class SortModel(nn.Module):
         clamped_indices = self.indices.clamp(0, 1)
         f = FuncGenerator.make_piecewise_linear(clamped_indices, array)
 
-        alpha = 10
-        delta = 0.0005
+        alpha = 100
+        delta = 0.000005
 
         sorted_indices, _ = torch.sort(clamped_indices)
         left_points = sorted_indices[:-1] + delta
