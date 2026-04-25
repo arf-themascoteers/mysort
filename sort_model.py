@@ -47,7 +47,7 @@ class SortModel(nn.Module):
         self.alpha = 1
         self.min_loss = 0.00000001
         self.NUM_EPOCHS = 100000
-        self.LEARNING_RATE = 0.1
+        self.LEARNING_RATE = 1
 
 
     def forward(self, array):
