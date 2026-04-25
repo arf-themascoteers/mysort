@@ -4,40 +4,6 @@ import torch
 import torch.nn as nn
 
 
-class FuncGenerator:
-    @staticmethod
-    def make_piecewise_linear(xp, yp):
-        xp = xp.float()
-        yp = yp.float()
-
-        order = torch.argsort(xp.detach())
-        xp = xp[order]
-        yp = yp[order]
-
-        def f(x):
-            x = torch.as_tensor(x).float()
-            original_shape = x.shape
-            x_flat = x.reshape(-1)
-
-            lo = xp[0].detach()
-            hi = xp[-1].detach()
-            x_clamped = x_flat.clamp(lo, hi)
-
-            i = torch.searchsorted(xp.detach(), x_clamped.detach(), right=True) - 1
-            i = i.clamp(0, len(xp) - 2)
-
-            x0 = xp[i]
-            x1 = xp[i + 1]
-            y0 = yp[i]
-            y1 = yp[i + 1]
-
-            y = y0 + (x_clamped - x0) * (y1 - y0) / (x1 - x0)
-
-            return y.reshape(original_shape)
-
-        return f
-
-
 class Utils:
     @staticmethod
     def ranks_of(tensor):
@@ -84,36 +50,14 @@ class SortModel(nn.Module):
         self.epoch = 0
 
     def forward(self, array):
-        clamped_indices = self.indices.clamp(0, 1)
-        lam = 0.1
-        m = torch.mean(clamped_indices)
-        clamped_indices = (1 - lam) * clamped_indices + lam * m
+        sorted_indices, perm = torch.sort(self.indices)
+        sorted_array = array[perm]
 
-        eps = 1e-6
-        positional = eps * torch.arange(
-            clamped_indices.numel(),
-            dtype=clamped_indices.dtype,
-            device=clamped_indices.device,
-        )
-        clamped_indices = clamped_indices + positional
+        diffs = sorted_array[1:] - sorted_array[:-1]
+        violations = torch.relu(-diffs)
+        spacing = sorted_indices[1:] - sorted_indices[:-1]
 
-        f = FuncGenerator.make_piecewise_linear(clamped_indices, array)
-
-        alpha = 100
-        delta = 0.0000005
-
-        sorted_indices, _ = torch.sort(clamped_indices)
-        left_points = sorted_indices[:-1] + delta
-        right_points = sorted_indices[1:] - delta
-
-        left_items = f(left_points)
-        right_items = f(right_points)
-
-        gaps = torch.relu(left_items - right_items)
-        gaps = gaps / (gaps.sum() + 0.00001)
-        spacing = gaps * torch.abs(sorted_indices[:-1] - sorted_indices[1:])
-        total_loss = gaps.sum() + 0.001 * spacing.sum()
-        return alpha * total_loss
+        return (violations * spacing).sum()
 
     def get_indices(self):
         return torch.argsort(self.indices)
