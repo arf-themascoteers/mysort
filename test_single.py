@@ -6,7 +6,7 @@ from sort_model import Utils, predict
 def main():
     torch.manual_seed(0)
 
-    array = [0.844422, 0.757954, 0.420572]
+    array = [0.000, 0.010, 0.000]
 
     original = torch.tensor(array, dtype=torch.float32)
     print(f"original: {original.tolist()}")

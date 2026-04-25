@@ -63,6 +63,12 @@ def run_tests(output_csv: Path):
         "elapsed_seconds",
     ]
 
+    print(
+        f"{'#':>4} {'len':>4} {'case_type':<22} {'orig_score':>10} "
+        f"{'final':>6} {'result':<8} {'array':<60}"
+    )
+    print("-" * 120)
+
     for test_id, (case_type, array) in enumerate(cases):
         original = torch.tensor(array, dtype=torch.float32)
         original_score = Utils.score_sortedness(original)
@@ -75,6 +81,15 @@ def run_tests(output_csv: Path):
         result_list = result.tolist()
         monotonic = is_sorted(result_list)
         perfectly_sorted = final_score == 0
+
+        status = "PASS" if perfectly_sorted else "FAIL"
+        array_preview = ", ".join(f"{v:.3f}" for v in array)
+        if len(array_preview) > 58:
+            array_preview = array_preview[:55] + "..."
+        print(
+            f"{test_id:>4} {len(array):>4} {case_type:<22} {int(original_score):>10} "
+            f"{int(final_score):>6} {status:<8} [{array_preview}]"
+        )
 
         rows.append(
             [

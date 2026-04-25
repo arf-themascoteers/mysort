@@ -100,7 +100,7 @@ class SortModel(nn.Module):
         clamped_indices = self.indices.clamp(0, 1)
         f = FuncGenerator.make_piecewise_linear(clamped_indices, array)
 
-        alpha = 10
+        alpha = 5
         delta = 0.0005
 
         sorted_indices, _ = torch.sort(clamped_indices)
@@ -119,10 +119,14 @@ class SortModel(nn.Module):
         return torch.argsort(self.indices)
 
 
-def predict(array, num_epochs=1000, lr=0.1, verbose=False):
+NUM_EPOCHS = 10000
+LEARNING_RATE = 0.1
+
+
+def predict(array, verbose=False):
     array = torch.as_tensor(array, dtype=torch.float32)
     model = SortModel(len(array))
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
 
     csv_file = None
     writer = None
@@ -136,7 +140,7 @@ def predict(array, num_epochs=1000, lr=0.1, verbose=False):
         print("".join(f"{h:>{col_width}}" for h in header))
 
     try:
-        for epoch in range(num_epochs):
+        for epoch in range(NUM_EPOCHS):
             optimizer.zero_grad()
             loss = model(array)
             loss.backward()
