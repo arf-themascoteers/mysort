@@ -48,6 +48,8 @@ class SortModel(nn.Module):
         evenly_spaced = torch.linspace(0, 1, array_length)
         self.indices = nn.Parameter(evenly_spaced)
         self.epoch = 0
+        self.alpha = 100
+        self.min_loss = 0.00000001
 
     def forward(self, array):
         sorted_indices, perm = torch.sort(self.indices)
@@ -57,8 +59,7 @@ class SortModel(nn.Module):
         violations = torch.relu(-diffs)
         spacing = sorted_indices[1:] - sorted_indices[:-1]
         relevant_spacing = violations * spacing
-        #relevant_spacing = relevant_spacing / (relevant_spacing.sum() + 0.00001)
-        return (violations + relevant_spacing).sum()
+        return (violations+relevant_spacing).mean() *self.alpha
 
     def get_indices(self):
         return torch.argsort(self.indices)
@@ -96,12 +97,12 @@ class SortModel(nn.Module):
                     formatted = []
                     for value in row:
                         if isinstance(value, float):
-                            formatted.append(f"{value:>{col_width}.4f}")
+                            formatted.append(f"{value:>{col_width}.8f}")
                         else:
                             formatted.append(f"{value:>{col_width}}")
                     print("".join(formatted))
 
-                if loss.item() < 0.000001:
+                if loss.item() < self.min_loss:
                     break
         finally:
             if csv_file is not None:
