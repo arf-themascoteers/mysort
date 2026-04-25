@@ -46,7 +46,7 @@ class SortModel(nn.Module):
         self.epoch = 0
         self.alpha = 1
         self.min_loss = 0.00000001
-        self.NUM_EPOCHS = 10000
+        self.NUM_EPOCHS = 100000
         self.LEARNING_RATE = 0.1
 
 
