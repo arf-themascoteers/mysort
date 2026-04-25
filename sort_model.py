@@ -44,22 +44,20 @@ class SortModel(nn.Module):
         evenly_spaced = torch.linspace(0, 1, array_length)
         self.indices = nn.Parameter(evenly_spaced)
         self.epoch = 0
-        self.alpha = 1
         self.min_loss = 0.00000001
-        self.NUM_EPOCHS = 100
-        self.LEARNING_RATE = 1
+        self.NUM_EPOCHS = 5000
+        self.LEARNING_RATE = 0.01
 
 
     def forward(self, array):
-        sorted_indices, perm = torch.sort(self.indices)
-        sorted_array = array[perm]
-
-        diffs = sorted_array[1:] - sorted_array[:-1]
-        violations = torch.relu(-diffs)
-        spacing = sorted_indices[1:] - sorted_indices[:-1]
-        scale_spacing = torch.where(violations != 0, violations + 0.01, violations)
-        relevant_spacing = scale_spacing * spacing
-        return (scale_spacing+relevant_spacing).sum() *self.alpha
+        arr_diff = array.unsqueeze(0) - array.unsqueeze(1)
+        idx_diff = self.indices.unsqueeze(0) - self.indices.unsqueeze(1)
+        raw = -arr_diff * idx_diff
+        violations = torch.relu(raw)
+        scaled = torch.where(violations > 0, violations + 0.01, violations)
+        masked_spacing = torch.where(violations > 0, idx_diff.abs(), torch.zeros_like(idx_diff))
+        relevant_spacing = scaled * masked_spacing
+        return (scaled + relevant_spacing).sum()
 
     def get_indices(self):
         return torch.argsort(self.indices)

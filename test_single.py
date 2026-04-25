@@ -4,7 +4,7 @@ from generate_test_cases import load_cases
 from sort_model import SortModel, Utils
 
 
-CASE_ID = 108
+CASE_ID = 132
 
 
 def main():
