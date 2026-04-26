@@ -1,7 +1,7 @@
 import torch
 
 from generate_test_cases import load_cases
-from sort_model import SortModel, Utils
+from tau_sort import TauSort, Utils
 
 
 CASE_ID = 5
@@ -21,7 +21,7 @@ def main():
     print(f"original score: {Utils.score_sortedness(original)}")
     print()
 
-    model = SortModel(len(original))
+    model = TauSort(len(original))
     result = model.predict(original.clone(), verbose=True)
 
     print()

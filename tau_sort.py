@@ -5,12 +5,14 @@ import torch.nn as nn
 
 
 class Utils:
+    #For reporting
     @staticmethod
     def ranks_of(tensor):
         sorted_positions = torch.argsort(tensor)
         ranks = torch.argsort(sorted_positions)
         return ranks
 
+    # For reporting
     @staticmethod
     def score_sortedness(array):
         ideal_ranks = Utils.ranks_of(array)
@@ -38,7 +40,7 @@ class Utils:
         return row
 
 
-class SortModel(nn.Module):
+class TauSort(nn.Module):
     def __init__(self, array_length):
         super().__init__()
         evenly_spaced = torch.linspace(0, 1, array_length)
@@ -61,6 +63,7 @@ class SortModel(nn.Module):
         return loss_mat.sum()
 
     def get_indices(self):
+        #For log purposes only
         return torch.argsort(self.indices)
 
     def predict(self, array, verbose=False):
@@ -124,7 +127,7 @@ def main():
 
     for array in test_arrays:
         original = torch.tensor(array, dtype=torch.float32)
-        model = SortModel(len(original))
+        model = TauSort(len(original))
         sorted_array = model.predict(original, verbose=False)
         print(f"original: {original.tolist()}")
         print(f"sorted:   {sorted_array.tolist()}")

@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 
 from generate_test_cases import load_cases
-from sort_model import SortModel, Utils
+from tau_sort import TauSort, Utils
 
 
 def is_sorted(values):
@@ -47,7 +47,7 @@ def run_tests(output_csv: Path):
             original_score = Utils.score_sortedness(original)
 
             start = time.perf_counter()
-            model = SortModel(len(original))
+            model = TauSort(len(original))
             result = model.predict(original.clone(), verbose=False)
             elapsed = time.perf_counter() - start
             epochs_run = model.epoch + 1
